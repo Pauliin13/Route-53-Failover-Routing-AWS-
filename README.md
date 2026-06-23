@@ -1,193 +1,295 @@
-# Route-53-Failover-Routing-AWS-
+# 🚀 AWS Route 53 Failover Routing Lab
 
+![AWS](https://img.shields.io/badge/AWS-Route%2053-orange)
+![EC2](https://img.shields.io/badge/Amazon-EC2-yellow)
+![CloudWatch](https://img.shields.io/badge/Amazon-CloudWatch-blue)
+![SNS](https://img.shields.io/badge/Amazon-SNS-red)
+![High Availability](https://img.shields.io/badge/Architecture-High%20Availability-green)
 
-## 📌 Visão geral
+## 📖 Project Overview
 
-Este projeto demonstra a implementação de uma arquitetura de **alta disponibilidade (High Availability)** utilizando o **Amazon Route 53 com Failover Routing Policy**, integrado com **Amazon EC2, Health Checks e Amazon SNS**.
+This project demonstrates the implementation of a highly available web application using Amazon Route 53 Failover Routing Policy.
 
-O objetivo é garantir que uma aplicação web continue disponível mesmo em caso de falha de uma instância principal.
-
----
-
-## 🧠 Conceitos aplicados
-
-Durante este laboratório foram aplicados os seguintes conceitos:
-
-* DNS com **Route 53**
-* Políticas de roteamento **Failover (Primary/Secondary)**
-* Monitoramento com **Health Checks**
-* Integração com **CloudWatch Alarm**
-* Notificações via **Amazon SNS**
-* Alta disponibilidade em múltiplas Availability Zones (AZs)
+The architecture uses two EC2 instances deployed across different Availability Zones, Route 53 Health Checks, CloudWatch Alarms, and Amazon SNS notifications to provide automatic failover and continuous service availability.
 
 ---
 
-## 🏗️ Arquitetura da solução
+# 🎯 Objectives
 
-A arquitetura é composta por:
-
-* **CafeInstance1 (Primária)** → Instância principal em uma AZ
-* **CafeInstance2 (Secundária)** → Instância de backup em outra AZ
-* **Route 53** → Gerencia o tráfego DNS
-* **Health Check** → Monitora a instância primária
-* **SNS Topic** → Envia notificações quando falhas são detectadas
-
-Fluxo:
-
-1. Usuário acessa o domínio via Route 53
-2. O tráfego é direcionado para a instância primária
-3. O Health Check monitora continuamente o endpoint `/cafe`
-4. Em caso de falha:
-
-   * Health Check muda para **Unhealthy**
-   * Route 53 ativa o failover automaticamente
-   * Tráfego é redirecionado para a instância secundária
-   * SNS envia notificação por e-mail
+* Configure Route 53 Failover Routing
+* Monitor application health using Health Checks
+* Implement automatic failover between EC2 instances
+* Configure CloudWatch alarms
+* Send notifications using Amazon SNS
+* Improve application availability and resiliency
 
 ---
 
-## ⚙️ Pré-requisitos do ambiente
+# 🏗 Solution Architecture
 
-* 2 instâncias EC2 com Apache + aplicação LAMP já configurada
-* Instâncias em diferentes Availability Zones
-* Acesso ao AWS Route 53
-* Permissões para criar:
-
-  * Health Checks
-  * Hosted Zones
-  * SNS Topics
-
----
-
-## 🧪 Implementação passo a passo
-
----
-
-### 1. Validação das instâncias EC2
-
-Verificações realizadas:
-
-* CafeInstance1 (Primária) em execução
-* CafeInstance2 (Secundária) em execução
-* Aplicação acessível via IP público:
-
-  * `http://<IP>/cafe/`
-
----
-
-### 2. Criação do Health Check
-
-No Amazon Route 53:
-
-* **Name:** Primary-Website-Health
-* **Type:** Endpoint
-* **Protocol:** HTTP
-* **IP address:** IP da CafeInstance1
-* **Path:** `/cafe`
-* **Request interval:** 10 seconds (Fast)
-* **Failure threshold:** 2
-
-📌 Resultado: monitoramento ativo da instância primária.
-
----
-
-### 3. Configuração de alerta SNS
-
-* Criação de um **SNS Topic**:
-
-  * Name: `Primary-Website-Health`
-* Adição de e-mail como endpoint
-* Confirmação da assinatura via e-mail
-
-📌 Resultado: notificações automáticas em caso de falha.
-
----
-
-### 4. Configuração do Route 53 (Failover Routing)
-
-Na Hosted Zone do domínio:
-
-#### 🔵 Registro Primário (Primary)
-
-* Name: `www`
-* Type: A
-* Value: IP da CafeInstance1
-* Routing policy: Failover
-* Failover type: Primary
-* Health Check: habilitado (Primary-Website-Health)
-* TTL: 15 segundos
-
----
-
-#### 🟡 Registro Secundário (Secondary)
-
-* Name: `www`
-* Type: A
-* Value: IP da CafeInstance2
-* Routing policy: Failover
-* Failover type: Secondary
-* Health Check: NÃO configurado
-* TTL: 15 segundos
-
----
-
-## 🧪 Teste de funcionamento
-
-### Teste inicial (normal)
-
-* Acesso ao domínio:
-
-```
-http://www.<dominio>.vocareum.training/cafe/
+```text
+                             Users
+                               │
+                               ▼
+                        Amazon Route 53
+                         Failover Policy
+                               │
+             ┌─────────────────┴────────────────┐
+             │                                  │
+             ▼                                  ▼
+       Primary Record                     Secondary Record
+             │                                  │
+             ▼                                  ▼
+      CafeInstance1                       CafeInstance2
+        Primary EC2                        Backup EC2
+             │
+             ▼
+        Route 53 Health Check
+             │
+             ▼
+        CloudWatch Alarm
+             │
+             ▼
+           Amazon SNS
+      Email Notifications
 ```
 
-* Resposta da CafeInstance1 (primária)
+---
+
+# ⚙️ AWS Services Used
+
+| Service                | Purpose                  |
+| ---------------------- | ------------------------ |
+| Amazon EC2             | Web servers              |
+| Amazon Route 53        | DNS and Failover Routing |
+| Route 53 Health Checks | Endpoint monitoring      |
+| Amazon CloudWatch      | Alarm generation         |
+| Amazon SNS             | Notifications            |
+| Apache Web Server      | Hosting the application  |
 
 ---
 
-### Simulação de falha
+# 🔧 Environment Configuration
 
-* Instância CafeInstance1 foi parada manualmente
-* Health Check detectou falha após ~1–2 minutos
-* Status alterado para **Unhealthy**
+## Primary Instance
 
----
-
-### Resultado do Failover
-
-* Route 53 automaticamente redirecionou o tráfego para:
-
-  * CafeInstance2 (secundária)
-* Aplicação permaneceu acessível sem interrupção
+| Parameter     | Value          |
+| ------------- | -------------- |
+| Instance Name | CafeInstance1  |
+| Role          | Primary Server |
+| Health Check  | Enabled        |
 
 ---
 
-## 📊 Resultados obtidos
+## Secondary Instance
 
-✔ Alta disponibilidade implementada com sucesso
-✔ Failover automático funcionando corretamente
-✔ Monitoramento contínuo via Health Check
-✔ Notificações configuradas via SNS
-✔ Redundância entre Availability Zones
-
----
-
-## 🚀 Conclusão
-
-Este laboratório demonstra uma arquitetura fundamental para sistemas em produção na AWS, garantindo:
-
-* Resiliência contra falhas de instâncias
-* Continuidade de serviço
-* Automação de failover sem intervenção manual
-
-O uso combinado de Route 53, Health Checks e SNS permite construir soluções altamente confiáveis e escaláveis.
+| Parameter     | Value         |
+| ------------- | ------------- |
+| Instance Name | CafeInstance2 |
+| Role          | Backup Server |
+| Health Check  | Not required  |
 
 ---
 
-## 📌 Tecnologias utilizadas
+# 🛠 Implementation Steps
 
-* Amazon EC2
+## Step 1 - Validate EC2 Instances
+
+Verified:
+
+* CafeInstance1 running
+* CafeInstance2 running
+* Application accessible through:
+
+```text
+http://<public-ip>/cafe/
+```
+
+---
+
+## Step 2 - Create Route 53 Health Check
+
+Configuration:
+
+| Parameter         | Value                  |
+| ----------------- | ---------------------- |
+| Name              | Primary-Website-Health |
+| Protocol          | HTTP                   |
+| Path              | /cafe                  |
+| Interval          | 10 seconds             |
+| Failure Threshold | 2                      |
+
+Purpose:
+
+Continuously monitor the primary web server.
+
+---
+
+## Step 3 - Configure Amazon SNS
+
+Created SNS Topic:
+
+```text
+Primary-Website-Health
+```
+
+Added email subscription and confirmed the endpoint.
+
+Purpose:
+
+Receive notifications whenever the primary server becomes unavailable.
+
+---
+
+## Step 4 - Configure Route 53 Failover Routing
+
+### Primary Record
+
+| Parameter      | Value      |
+| -------------- | ---------- |
+| Record Type    | A          |
+| Routing Policy | Failover   |
+| Failover Type  | Primary    |
+| Health Check   | Enabled    |
+| TTL            | 15 seconds |
+
+Points to:
+
+```text
+CafeInstance1
+```
+
+---
+
+### Secondary Record
+
+| Parameter      | Value      |
+| -------------- | ---------- |
+| Record Type    | A          |
+| Routing Policy | Failover   |
+| Failover Type  | Secondary  |
+| Health Check   | Disabled   |
+| TTL            | 15 seconds |
+
+Points to:
+
+```text
+CafeInstance2
+```
+
+---
+
+# 🧪 Failover Testing
+
+## Normal Operation
+
+Traffic flow:
+
+```text
+User → Route 53 → CafeInstance1
+```
+
+Application available through:
+
+```text
+http://www.<domain>.vocareum.training/cafe/
+```
+
+---
+
+## Failure Simulation
+
+Primary EC2 instance was stopped manually.
+
+Route 53 Health Check detected the outage after approximately 1–2 minutes.
+
+Status changed to:
+
+```text
+Unhealthy
+```
+
+---
+
+## Automatic Failover
+
+Traffic was automatically redirected to:
+
+```text
+CafeInstance2
+```
+
+Service remained available without manual intervention.
+
+---
+
+# 📊 Results
+
+✅ Automatic failover configured successfully
+
+✅ High availability achieved
+
+✅ Continuous monitoring implemented
+
+✅ Email notifications configured
+
+✅ Multi-AZ redundancy established
+
+---
+
+# 📚 Skills Demonstrated
+
 * Amazon Route 53
-* Amazon CloudWatch
+* Failover Routing Policies
+* DNS Management
+* Health Checks
+* CloudWatch Alarms
 * Amazon SNS
-* Linux + Apache (LAMP Stack)
+* High Availability Architecture
+* Disaster Recovery Concepts
+* Multi-AZ Deployments
+* Linux and Apache Administration
+
+---
+
+# 🎓 Learning Outcomes
+
+This project provided hands-on experience with:
+
+* Designing highly available architectures
+* Implementing DNS-based failover
+* Monitoring application health
+* Configuring automated notifications
+* Increasing application resiliency
+* Applying disaster recovery concepts
+
+---
+
+# 📂 Repository Structure
+
+```text
+route53-failover-routing-lab
+│
+├── README.md
+├── images
+│     ├── architecture.png
+│     ├── route53-health-check.png
+│     ├── cloudwatch-alarm.png
+│     ├── sns-topic.png
+│     └── failover-success.png
+│
+└── docs
+      └── lab-notes.md
+```
+
+---
+
+# 📌 Author
+
+**Paulo Henrique
+
+AWS Cloud Practitioner Candidate | Cloud Computing Enthusiast
+
+---
+
+## ⭐ If you found this project useful, feel free to star the repository.
